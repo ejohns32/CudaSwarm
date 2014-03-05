@@ -1,7 +1,5 @@
-#ifndef _SWARM_CUDA_H_
-#define _SWARM_CUDA_H_
-
-class QuadTree;
+#ifndef _SWARM_AGENT_H_
+#define _SWARM_AGENT_H_
 
 const float VIEW_DISTANCE = 5.0f;
 
