@@ -27,7 +27,7 @@ return H_MAX_POSITION;
 #endif
 	}
 	
-	__host__ __device__ void update(const QuadTree &quadTree, const float timeStep) {		position.x += velocity.x * timeStep;
+	__host__ __device__ void update(const float timeStep) {		position.x += velocity.x * timeStep;
 		position.y += velocity.y * timeStep;
 
 		if (position.x >= maxPosition().x) {

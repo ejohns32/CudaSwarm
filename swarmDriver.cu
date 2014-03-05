@@ -31,7 +31,8 @@ struct AgentUpdate {
 	AgentUpdate(QuadTree quadTree, float timeStep) : quadTree(quadTree), timeStep(timeStep) {}
 
 	__host__ __device__ void operator()(SwarmAgent &agent) {
-		agent.update(quadTree, timeStep);
+		// update velocity based on quadTree
+		agent.update(timeStep);
 	}
 };
 
