@@ -49,20 +49,60 @@ void setup(thrust::device_vector<SwarmAgent> &dSwarm)
 }
 
 struct AgentUpdate {
-	QuadTree quadTree;
+	SubSwarm subSwarm;
 	float timeStep;
 
-	AgentUpdate(QuadTree quadTree, float timeStep) : quadTree(quadTree), timeStep(timeStep) {}
+	AgentUpdate(SubSwarm subSwarm, float timeStep) : subSwarm(subSwarm), timeStep(timeStep) {}
 
 	__host__ __device__ void operator()(SwarmAgent &agent) {
-		// update velocity based on quadTree
-		agent.update(timeStep);
+		if (agent.alive) {
+			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
+			{
+				if (itr->alive && itr->distance(agent.position.x, agent.position.y) < VIEW_DISTANCE)
+				{
+					// change velocity
+				}
+			}
+
+			agent.update(timeStep);
+		}
 	}
 };
 
 void updateSwarm(QuadTree &quadTree, thrust::device_vector<SwarmAgent> &dSwarm, float timeStep)
 {
-	thrust::for_each(dSwarm.begin(), dSwarm.end(), AgentUpdate(quadTree, timeStep));
+	for (int nodeNum = 0; nodeNum < quadTree.getNodeCount(); ++nodeNum)
+	{
+		SubSwarm subSwarm = quadTree.getNodeSubSwarm(nodeNum);
+		thrust::for_each(thrust::device_pointer_cast(subSwarm.begin()), thrust::device_pointer_cast(subSwarm.end()), AgentUpdate(subSwarm, timeStep));
+	}
+}
+
+struct AgentAlive {
+	SubSwarm subSwarm;
+
+	AgentAlive(SubSwarm subSwarm) : subSwarm(subSwarm) {}
+
+	__host__ __device__ void operator()(SwarmAgent &agent) {
+		if (agent.alive) {
+			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
+			{
+				if (itr != &agent && itr->alive && (int)itr->position.x == (int)agent.position.x && (int)itr->position.y == (int)agent.position.y)
+				{
+					agent.alive = false; // race condition with itr->alive in if
+				}
+			}
+		}
+	}
+};
+
+void checkCollisions(QuadTree &quadTree, thrust::device_vector<SwarmAgent> &dSwarm)
+{
+	for (int nodeNum = 0; nodeNum < quadTree.getNodeCount(); ++nodeNum)
+	{
+		SubSwarm subSwarm = quadTree.getNodeSubSwarm(nodeNum);
+		thrust::for_each(thrust::device_pointer_cast(subSwarm.begin()), thrust::device_pointer_cast(subSwarm.end()), AgentAlive(subSwarm));
+	}
 }
 
 void swarmLoop(thrust::device_vector<SwarmAgent> &dSwarm, float timeStep)
@@ -75,7 +115,7 @@ void swarmLoop(thrust::device_vector<SwarmAgent> &dSwarm, float timeStep)
 	{
 		updateSwarm(quadTree, dSwarm, timeStep);
 		quadTree.update();
-		//checkCollisions(quadTree, dSwarm);
+		checkCollisions(quadTree, dSwarm);
 		drawSwarm(dSwarm, time);
 		usleep(timeStep * 1000 * 1000);
 		time += timeStep;
