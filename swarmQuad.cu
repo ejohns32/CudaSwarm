@@ -1,23 +1,18 @@
 #include "swarmQuad.h"
 
+QuadTree::QuadTree(thrust::device_vector<SwarmAgent> &dSwarm) : dSubSwarm(thrust::raw_pointer_cast(dSwarm.data()), thrust::raw_pointer_cast(dSwarm.data() + dSwarm.size())) {}
+
 void QuadTree::update()
 {
-	// rebuld the tree
+	// rebuild the tree
 }
 
-thrust::device_vector<SwarmAgent> QuadTree::getNearby(const SwarmAgent agent)
+unsigned int QuadTree::getNodeCount()
 {
-	thrust::device_vector<SwarmAgent> rtnValue = thrust::device_vector<SwarmAgent>();
+	return 1;
+}
 
-	// should be done with thrust::copyif() in update
-	for (thrust::device_vector<SwarmAgent>::iterator itr = dSwarm.begin(); itr != dSwarm.end(); ++itr)
-	{
-		SwarmAgent temp = *itr;
-		if (temp.distance(agent.position.x, agent.position.y) < VIEW_DISTANCE)
-		{
-			rtnValue.push_back(*itr);
-		}
-	}
-
-	return rtnValue;
+SubSwarm QuadTree::getNodeSubSwarm(unsigned int node)
+{
+	return dSubSwarm;
 }

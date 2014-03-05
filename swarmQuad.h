@@ -5,14 +5,25 @@
 
 #include "swarmAgent.h"
 
-class QuadTree
-{
-	thrust::device_vector<SwarmAgent> &dSwarm;
+class SubSwarm {
+	SwarmAgent *mBegin;
+	SwarmAgent *mEnd;
 
 public:
-	QuadTree(thrust::device_vector<SwarmAgent> &dSwarm) : dSwarm(dSwarm) {}
+	SubSwarm(SwarmAgent *mBegin, SwarmAgent *mEnd) : mBegin(mBegin), mEnd(mEnd) {}
+	__host__ __device__ SwarmAgent *begin() const { return mBegin; }
+	__host__ __device__ SwarmAgent *end() const { return mEnd; }
+};
+
+class QuadTree
+{
+	SubSwarm dSubSwarm;
+
+public:
+	QuadTree(thrust::device_vector<SwarmAgent> &dSwarm);
 	void update();
-	thrust::device_vector<SwarmAgent> getNearby(SwarmAgent agent);
+	unsigned int getNodeCount();
+	SubSwarm getNodeSubSwarm(unsigned int node);
 };
 
 #endif
