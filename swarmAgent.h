@@ -1,8 +1,6 @@
 #ifndef _SWARM_AGENT_H_
 #define _SWARM_AGENT_H_
 
-const float VIEW_DISTANCE = 5.0f;
-
 __constant__ int2 D_MAX_POSITION = {80, 30};
 const int2 H_MAX_POSITION = {80, 30};
 

@@ -11,6 +11,7 @@
 const int NUM_TEAMS = 2;
 const int NUM_AGENTS_PER_TEAM = 32;
 
+const float VIEW_DISTANCE = 10;
 
 // from fun_with_points
 __host__ __device__
