@@ -12,6 +12,7 @@ const int NUM_TEAMS = 2;
 const int NUM_AGENTS_PER_TEAM = 32;
 
 const float VIEW_DISTANCE = 10;
+const float TEAM_DISTANCE = 2;
 
 // from fun_with_points
 __host__ __device__
@@ -55,13 +56,51 @@ struct AgentUpdate {
 
 	AgentUpdate(SubSwarm subSwarm, float timeStep) : subSwarm(subSwarm), timeStep(timeStep) {}
 
+	__host__ __device__ static int sgn(float val) {
+		return (val > 0) - (val < 0);
+	}
+
 	__host__ __device__ void operator()(SwarmAgent &agent) {
 		if (agent.alive) {
+			SwarmAgent *closestTeam = NULL;
+			float closestTeamDist = VIEW_DISTANCE;
+			SwarmAgent *closestEnemy = NULL;
+			float closestEnemyDist = VIEW_DISTANCE;
+
 			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
 			{
-				if (itr->alive && itr->distance(agent.position.x, agent.position.y) < VIEW_DISTANCE)
+				if (itr != &agent && itr->alive)
 				{
-					// change velocity
+					float dist = itr->distance(agent.position.x, agent.position.y);
+					if (itr->team == agent.team && dist < closestTeamDist)
+					{
+						closestTeamDist = dist;
+						closestTeam = itr;
+					} else if (itr->team != agent.team && dist < closestEnemyDist) {
+						closestEnemyDist = dist;
+						closestEnemy = itr;
+					}
+				}
+			}
+
+			if (closestEnemy != NULL) {
+				float xDif = closestEnemy->position.x - agent.position.x;
+				float yDif = closestEnemy->position.y - agent.position.y;
+				float angle = atan2f(yDif, xDif);
+
+				// probably want gradual direction changes
+				agent.velocity.x = cos(angle);
+				agent.velocity.y = sin(angle);
+			}
+
+			if (closestTeam != NULL) {
+				float xDif = closestTeam->position.x - agent.position.x;
+				float yDif = closestTeam->position.y - agent.position.y;
+
+				if (sgn(xDif) == sgn(agent.velocity.x) && abs(xDif) < TEAM_DISTANCE) {
+					agent.velocity.x = -agent.velocity.x;
+				} else if (sgn(yDif) == sgn(agent.velocity.y) && abs(yDif) < TEAM_DISTANCE) {
+					agent.velocity.y = -agent.velocity.y;
 				}
 			}
 
@@ -90,13 +129,14 @@ struct AgentAlive {
 			{
 				if (itr != &agent && itr->alive && (int)itr->position.x == (int)agent.position.x && (int)itr->position.y == (int)agent.position.y)
 				{
-					agent.alive = false; // race condition with itr->alive in if
+					agent.alive = false; // race condition with itr->alive in if (feature-bug: only one dies, so there's a winner)
 				}
 			}
 		}
 	}
 };
 
+// not sure this is the best way to do this
 void checkCollisions(QuadTree &quadTree, thrust::device_vector<SwarmAgent> &dSwarm)
 {
 	for (int nodeNum = 0; nodeNum < quadTree.getNodeCount(); ++nodeNum)
