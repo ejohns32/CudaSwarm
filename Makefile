@@ -17,4 +17,4 @@ gpu_swarm: swarmCuda.o swarmQuad.o swarmGraphics.o
 	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	rm -f exercise cpu_swarm gpu_swarm cpu_swarm.o gpu_swarm.o
+	rm -f gpu_swarm swarmCuda.o swarmQuad.o swarmGraphics.o
