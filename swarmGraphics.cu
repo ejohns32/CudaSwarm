@@ -13,8 +13,10 @@ void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm, const float time
 	int agentCount = 0;
 	for (thrust::host_vector<SwarmAgent>::iterator itr = hSwarm.begin(); itr != hSwarm.end(); ++itr) {
 		SwarmAgent temp = *itr;
-		if (temp.position.x < H_MAX_POSITION.x && temp.position.y < H_MAX_POSITION.y && temp.alive) {
-			display[(int)temp.position.y][(int)temp.position.x] = temp.team == 1 ? 'X' : 'O';
+		if (temp.alive) {
+			if (temp.position.x < H_MAX_POSITION.x && temp.position.y < H_MAX_POSITION.y) {
+				display[(int)temp.position.y][(int)temp.position.x] = temp.team == 1 ? 'X' : 'O';
+			}
 			++agentCount;
 		}
 	}
