@@ -7,11 +7,11 @@
 
 class QuadTree
 {
-	thrust::device_vector<SwarmAgent> tempSave;
+	thrust::device_vector<SwarmAgent> &dSwarm;
 
 public:
-	QuadTree(thrust::device_vector<SwarmAgent> &dSwarm) { update(dSwarm); }
-	void update(thrust::device_vector<SwarmAgent> &dSwarm);
+	QuadTree(thrust::device_vector<SwarmAgent> &dSwarm) : dSwarm(dSwarm) {}
+	void update();
 	thrust::device_vector<SwarmAgent> getNearby(SwarmAgent agent);
 };
 

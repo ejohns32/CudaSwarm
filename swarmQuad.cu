@@ -1,8 +1,8 @@
 #include "swarmQuad.h"
 
-void QuadTree::update(thrust::device_vector<SwarmAgent> &dSwarm)
+void QuadTree::update()
 {
-	tempSave = dSwarm;// nothing for now
+	// rebuld the tree
 }
 
 thrust::device_vector<SwarmAgent> QuadTree::getNearby(const SwarmAgent agent)
@@ -10,7 +10,7 @@ thrust::device_vector<SwarmAgent> QuadTree::getNearby(const SwarmAgent agent)
 	thrust::device_vector<SwarmAgent> rtnValue = thrust::device_vector<SwarmAgent>();
 
 	// should be done with thrust::copyif() in update
-	for (thrust::device_vector<SwarmAgent>::iterator itr = tempSave.begin(); itr != tempSave.end(); ++itr)
+	for (thrust::device_vector<SwarmAgent>::iterator itr = dSwarm.begin(); itr != dSwarm.end(); ++itr)
 	{
 		SwarmAgent temp = *itr;
 		if (temp.distance(agent.position.x, agent.position.y) < VIEW_DISTANCE)

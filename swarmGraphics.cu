@@ -3,19 +3,26 @@
 
 #include "swarmGraphics.h"
 
-void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm) {
+void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm, const float time) {
 	thrust::host_vector<SwarmAgent> hSwarm = dSwarm;
-	char display[MAX_POSITION.y][MAX_POSITION.x];
+	char display[H_MAX_POSITION.y][H_MAX_POSITION.x];
 
-	memset(display, ' ', MAX_POSITION.y * MAX_POSITION.x);
+	memset(display, ' ', H_MAX_POSITION.y * H_MAX_POSITION.x);
 
+
+	int agentCount = 0;
 	for (thrust::host_vector<SwarmAgent>::iterator itr = hSwarm.begin(); itr != hSwarm.end(); ++itr) {
 		SwarmAgent temp = *itr;
-		display[(int)temp.position.y][(int)temp.position.x] = temp.team == 1 ? 'X' : 'O';
+		if (temp.position.x < H_MAX_POSITION.x && temp.position.y < H_MAX_POSITION.y && temp.alive) {
+			display[(int)temp.position.y][(int)temp.position.x] = temp.team == 1 ? 'X' : 'O';
+			++agentCount;
+		}
 	}
 
-	for (int row = 0; row < MAX_POSITION.y; ++row) {
-		for (int col = 0; col < MAX_POSITION.x; ++col) {
+	std::cout << "---- swarm size: " << agentCount << " time: " << time << " ----" << std::endl;
+
+	for (int row = 0; row < H_MAX_POSITION.y; ++row) {
+		for (int col = 0; col < H_MAX_POSITION.x; ++col) {
 			std::cout << display[row][col];
 		}
 		std::cout << std::endl;
