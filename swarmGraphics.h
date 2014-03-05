@@ -3,7 +3,7 @@
 
 #include <thrust/device_vector.h>
 
-#include "swarmCuda.h"
+#include "swarmAgent.h"
 
 void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm, const float time);
 

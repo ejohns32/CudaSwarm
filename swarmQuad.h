@@ -3,7 +3,7 @@
 
 #include <thrust/device_vector.h>
 
-#include "swarmCuda.h"
+#include "swarmAgent.h"
 
 class QuadTree
 {

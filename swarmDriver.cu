@@ -2,18 +2,9 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "swarmCuda.h"
+#include "swarmAgent.h"
 #include "swarmQuad.h"
 #include "swarmGraphics.h"
-
-__device__ __host__ int2 maxPosition()
-{
-#ifdef __CUDA_ARCH__
-    return D_MAX_POSITION;
-#else
-    return H_MAX_POSITION;
-#endif
-}
 
 const int NUM_TEAMS = 2;
 const int NUM_AGENTS_PER_TEAM = 20;

@@ -7,7 +7,6 @@ const float VIEW_DISTANCE = 5.0f;
 
 __constant__ int2 D_MAX_POSITION = {80, 30};
 const int2 H_MAX_POSITION = {80, 30};
-__device__ __host__ int2 maxPosition();
 
 struct SwarmAgent {
 	float2 position;
@@ -15,16 +14,19 @@ struct SwarmAgent {
 	uint8_t team;
 	bool alive;
 
-	SwarmAgent() : team(0), alive(false) {
-		position.x = 0; position.y = 0;
-		velocity.x = 0; velocity.y = 0;
-	}
+	SwarmAgent();
+	SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel);
 
-	SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel) : team(team), alive(true) {
-		position.x = xPos; position.y = yPos;
-		velocity.x = xVel; velocity.y = yVel;
+	
+	__device__ __host__ int2 maxPosition()
+	{
+#ifdef __CUDA_ARCH__
+return D_MAX_POSITION;
+#else
+return H_MAX_POSITION;
+#endif
 	}
-
+	
 	__host__ __device__ void update(const QuadTree &quadTree, const float timeStep) {		position.x += velocity.x * timeStep;
 		position.y += velocity.y * timeStep;
 
