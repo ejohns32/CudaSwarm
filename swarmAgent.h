@@ -17,8 +17,8 @@ struct SwarmAgent {
 	SwarmAgent();
 	SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel);
 
-	
-	__device__ __host__ int2 maxPosition()
+
+	__device__ __host__ static int2 maxPosition()
 	{
 #ifdef __CUDA_ARCH__
 return D_MAX_POSITION;
