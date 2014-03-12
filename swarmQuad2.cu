@@ -26,40 +26,6 @@
 //   int get_leaf_offset(int id);
 //   int child_tag_mask(int tag, int which_child, int level, int max_level);
 
-// Operator which merges two bounding boxes.
-struct merge_bboxes
-{
-  inline __host__ __device__
-  bbox operator()(const bbox &b0, const bbox &b1) const
-  {
-    bbox bounds;
-    bounds.xmin = min(b0.xmin, b1.xmin);
-    bounds.xmax = max(b0.xmax, b1.xmax);
-    bounds.ymin = min(b0.ymin, b1.ymin);
-    bounds.ymax = max(b0.ymax, b1.ymax);
-    return bounds;
-  }
-};
-
-bbox compute_bounding_box(const thrust::device_vector<SwarmAgent> &points)
-{
-  return thrust::reduce(points.begin(), points.end(), bbox(), merge_bboxes());
-}
-
-
-// Classify a point with respect to the bounding box.
-struct classify_point
-{
-  bbox box;
-  int max_level;
-
-  // Create the classifier
-  classify_point(const bbox &b, int lvl) : box(b), max_level(lvl) {}
-
-  // Classify a point
-  inline __device__ __host__
-  int operator()(const SwarmAgent &p) { return point_to_tag(p, box, max_level); }
-};
 
 void compute_tags(const thrust::device_vector<SwarmAgent> &points, const bbox &bounds, int max_level, thrust::device_vector<int> &tags)
 {
@@ -75,23 +41,6 @@ void sort_points_by_tag(thrust::device_vector<int> &tags, thrust::device_vector<
   thrust::sequence(indices.begin(), indices.end());
   thrust::sort_by_key(tags.begin(), tags.end(), indices.begin());
 }
-
-
-struct child_index_to_tag_mask
-{
-  int level, max_level;
-  thrust::device_ptr<const int> nodes;
-  
-  child_index_to_tag_mask(int lvl, int max_lvl, thrust::device_ptr<const int> nodes) : level(lvl), max_level(max_lvl), nodes(nodes) {}
-  
-  inline __device__ __host__
-  int operator()(int idx) const
-  {
-    int tag = nodes[idx/4];
-    int which_child = (idx&3);
-    return child_tag_mask(tag, which_child, level, max_level);
-  }
-};
 
 
 void compute_child_tag_masks(const thrust::device_vector<int> &active_nodes,
@@ -129,33 +78,6 @@ void find_child_bounds(const thrust::device_vector<int> &tags,
                       thrust::make_transform_iterator(children.end(), _1 + length),
                       upper_bounds.begin());
 }
-
-
-struct classify_node
-{
-  int threshold;
-  int last_level;
-  
-  classify_node(int threshold, int last_level) : threshold(threshold), last_level(last_level) {}
-
-  inline __device__ __host__
-  int operator()(int lower_bound, int upper_bound) const
-  {
-    int count = upper_bound - lower_bound;
-    if (count == 0)
-    {
-      return EMPTY;
-    }
-    else if (last_level || count < threshold)
-    {
-      return LEAF;
-    }
-    else
-    {
-      return NODE;
-    }
-  }
-};
 
 
 void classify_children(const thrust::device_vector<int> &lower_bounds,
@@ -200,39 +122,6 @@ std::pair<int,int> enumerate_nodes_and_leaves(const thrust::device_vector<int> &
   return num_nodes_and_leaves_on_this_level;
 }
 
-
-struct write_nodes
-{
-  int num_nodes, num_leaves;
-
-  write_nodes(int num_nodes, int num_leaves) : 
-    num_nodes(num_nodes), num_leaves(num_leaves) 
-  {}
-
-  template <typename tuple_type>
-  inline __device__ __host__
-  int operator()(const tuple_type &t) const
-  {
-    int node_type = thrust::get<0>(t);
-    int node_idx  = thrust::get<1>(t);
-    int leaf_idx  = thrust::get<2>(t);
-
-    if (node_type == EMPTY)
-    {
-      return get_empty_id();
-    }
-    else if (node_type == LEAF)
-    {
-      return get_leaf_id(num_leaves + leaf_idx);
-    }
-    else
-    {
-      return num_nodes + 4 * node_idx;
-    }
-  }
-};
-
-
 void create_child_nodes(const thrust::device_vector<int> &child_node_kind,
                         const thrust::device_vector<int> &nodes_on_this_level,
                         const thrust::device_vector<int> &leaves_on_this_level,
@@ -255,19 +144,7 @@ void create_child_nodes(const thrust::device_vector<int> &child_node_kind,
 }
 
 
-struct make_leaf
-{
-  typedef int2 result_type;
-  template <typename tuple_type>
-  inline __device__ __host__
-  int2 operator()(const tuple_type &t) const
-  {
-    int x = thrust::get<0>(t);
-    int y = thrust::get<1>(t);
 
-    return make_int2(x, y);
-  }
-};
 
 
 void create_leaves(const thrust::device_vector<int> &child_node_kind,
@@ -409,10 +286,13 @@ void QuadTree::buildTree(){
 
 unsigned int QuadTree::getNodeCount()
 {
-	return 1;
+	return leaves.size();
 }
 
-SubSwarm QuadTree::getNodeSubSwarm(unsigned int node)
+SubSwarm QuadTree::getNodeSubSwarm(unsigned int idx)
 {
-	return agents;
+   int2 dblInt = leaves[idx];
+   int start = dblInt.x, end = dblInt.y;
+	return SubSwarm(thrust::raw_pointer_cast(indices.data() + start),
+             thrust::raw_pointer_cast(indices.data() + end));
 }
