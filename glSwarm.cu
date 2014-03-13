@@ -60,6 +60,8 @@ const unsigned int window_width  = 512;
 const unsigned int window_height = 512;
 
 // swarm data
+unsigned int numTeams = 2;
+unsigned int numAgentsPerTeam = 32;
 thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
 QuadTree quadTree = QuadTree(dSwarm);
 
@@ -105,6 +107,7 @@ void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res);
 // rendering callbacks
 void display();
 void keyboard(unsigned char key, int x, int y);
+void special(int key, int x, int y);
 void mouse(int button, int state, int x, int y);
 void motion(int x, int y);
 void timerEvent(int value);
@@ -149,7 +152,7 @@ void launch_kernel(float4 *pos)
 {
     // execute the kernel
     dim3 block(1024, 1, 1);
-    dim3 grid(dSwarm.size() / block.x + dSwarm.size() % block.x ? 1 : 0, 1, 1);
+    dim3 grid(dSwarm.size() / block.x + (dSwarm.size() % block.x ? 1 : 0), 1, 1);
     simple_vbo_kernel<<< grid, block>>>(pos, thrust::raw_pointer_cast(dSwarm.data()), dSwarm.size());
 }
 
@@ -333,11 +336,12 @@ bool runTest(int argc, char **argv)
     // register callbacks
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+    glutSpecialFunc(special);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
 
     // set up swarm
-    setup(dSwarm);
+    swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
     quadTree = QuadTree(dSwarm);
 
     // create VBO
@@ -428,7 +432,7 @@ void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
     // unregister this buffer object with CUDA
     cudaGraphicsUnregisterResource(vbo_res);
 
-    glBindBuffer(1, *vbo);
+    //glBindBuffer(1, *vbo);
     glDeleteBuffers(1, vbo);
 
     *vbo = 0;
@@ -461,9 +465,9 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    glDrawArrays(GL_POINTS, 0, NUM_AGENTS_PER_TEAM);
+    glDrawArrays(GL_POINTS, 0, numAgentsPerTeam);
     glColor3f(0.0, 1.0, 0.0);
-    glDrawArrays(GL_POINTS, NUM_AGENTS_PER_TEAM, NUM_AGENTS_PER_TEAM);
+    glDrawArrays(GL_POINTS, numAgentsPerTeam, numAgentsPerTeam);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
@@ -501,6 +505,30 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     {
         case (27) :
             exit(EXIT_SUCCESS);
+            break;
+    }
+}
+
+void special(int key, int, int)
+{
+    switch (key)
+    {
+        case GLUT_KEY_UP:
+            numAgentsPerTeam *= 2;
+            std::cout << "numAgentsPerTeam: " << numAgentsPerTeam << std::endl;
+            swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
+            quadTree = QuadTree(dSwarm);
+            deleteVBO(&vbo, cuda_vbo_resource);
+            createVBO(&vbo, &cuda_vbo_resource);
+            break;
+
+        case GLUT_KEY_DOWN:
+            numAgentsPerTeam /= 2;
+            std::cout << "numAgentsPerTeam: " << numAgentsPerTeam << std::endl;
+            swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
+            quadTree = QuadTree(dSwarm);
+            deleteVBO(&vbo, cuda_vbo_resource);
+            createVBO(&vbo, &cuda_vbo_resource);
             break;
     }
 }

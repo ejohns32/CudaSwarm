@@ -28,11 +28,11 @@ struct SpawnTeam {
 	}
 };
 
-void setup(thrust::device_vector<SwarmAgent> &dSwarm)
+void swarmSetup(thrust::device_vector<SwarmAgent> &dSwarm, unsigned int numTeams, unsigned int numAgentsPerTeam)
 {
-	thrust::host_vector<SwarmAgent> hSwarm(NUM_TEAMS * NUM_AGENTS_PER_TEAM);
+	thrust::host_vector<SwarmAgent> hSwarm(numTeams * numAgentsPerTeam);
 
-	thrust::tabulate(hSwarm.begin(), hSwarm.end(), SpawnTeam(NUM_TEAMS, NUM_AGENTS_PER_TEAM));
+	thrust::tabulate(hSwarm.begin(), hSwarm.end(), SpawnTeam(numTeams, numAgentsPerTeam));
 
 	dSwarm = hSwarm;
 }

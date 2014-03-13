@@ -17,7 +17,7 @@ void swarmLoop(thrust::device_vector<SwarmAgent> &dSwarm, float timeStep)
 int main()
 {
 	thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
-	setup(dSwarm);
+	swarmSetup(dSwarm, 2, 32);
 	swarmLoop(dSwarm, 0.1f);
 
 	return 0;
