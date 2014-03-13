@@ -25,10 +25,10 @@ swarmDriver.o: swarmDriver.cu swarmDriver.h swarmAgent.h swarmQuad.h swarmGraphi
 consoleSwarm: swarmDriver.o swarmAgent.o swarmQuad.o swarmGraphics.o
 	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-simpleGL.o: simpleGL.cu
+simpleGL.o: simpleGL.cu swarmDriver.h
 	/usr/local/cuda-5.5/bin/nvcc -o $@ -c $< $(GLCFLAGS) $(GLIFLAGS)
 
-simpleGL: simpleGL.o
+glSwarm: simpleGL.o swarmAgent.o swarmQuad.o
 	/usr/local/cuda-5.5/bin/nvcc -o $@ $^ $(GLCFLAGS) $(GLDFLAGS)
 
 clean:

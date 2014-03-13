@@ -31,19 +31,8 @@
 #include <string.h>
 #include <math.h>
 
-#ifdef _WIN32
-#  define WINDOWS_LEAN_AND_MEAN
-#  define NOMINMAX
-#  include <windows.h>
-#endif
-
-// OpenGL Graphics includes
 #include <GL/glew.h>
-#if defined (__APPLE__) || defined(MACOSX)
-#include <GLUT/glut.h>
-#else
 #include <GL/freeglut.h>
-#endif
 
 // includes, cuda
 #include <cuda_runtime.h>
@@ -59,6 +48,8 @@
 
 #include <vector_types.h>
 
+#include "swarmDriver.h"
+
 #define MAX_EPSILON_ERROR 10.0f
 #define THRESHOLD          0.30f
 #define REFRESH_DELAY     10 //ms
@@ -68,14 +59,16 @@
 const unsigned int window_width  = 512;
 const unsigned int window_height = 512;
 
-const unsigned int mesh_width    = 256;
-const unsigned int mesh_height   = 256;
+// swarm data
+thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
+QuadTree quadTree = QuadTree(dSwarm);
 
 // vbo variables
 GLuint vbo;
 struct cudaGraphicsResource *cuda_vbo_resource;
 void *d_vbo_buffer = NULL;
 
+const float timeStep = 0.01f;
 float g_fAnim = 0.0;
 
 // mouse controls
@@ -102,7 +95,7 @@ char **pArgv = NULL;
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
-bool runTest(int argc, char **argv, char *ref_file);
+bool runTest(int argc, char **argv);
 void cleanup();
 
 // GL functionality
@@ -120,8 +113,6 @@ void timerEvent(int value);
 
 // Cuda functionality
 void runCuda(struct cudaGraphicsResource **vbo_resource);
-void runAutoTest(int devID, char **argv, char *ref_file);
-void checkResultCuda(int argc, char **argv, const GLuint &vbo);
 
 const char *sSDKsample = "simpleGL (VBO)";
 
@@ -129,33 +120,32 @@ const char *sSDKsample = "simpleGL (VBO)";
 //! Simple kernel to modify vertex positions in sine wave pattern
 //! @param data  data in global memory
 ///////////////////////////////////////////////////////////////////////////////
-__global__ void simple_vbo_kernel(float4 *pos, unsigned int width, unsigned int height, float time)
+__global__ void simple_vbo_kernel(float4 *pos, SwarmAgent *agents, unsigned int agentCount)
 {
     unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
-    unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;
 
-    // calculate uv coordinates
-    float u = x / (float) width;
-    float v = y / (float) height;
-    u = u*2.0f - 1.0f;
-    v = v*2.0f - 1.0f;
+    if (x < agentCount)
+    {
+        SwarmAgent &temp = agents[x];
 
-    // calculate simple sine wave pattern
-    float freq = 4.0f;
-    float w = sinf(u*freq + time) * cosf(v*freq + time) * 0.5f;
+        // calculate uv coordinates
+        float u = (int)temp.position.x / temp.maxPosition().x;
+        float v = (int)temp.position.y / temp.maxPosition().y;
+        u = u*2.0f - 1.0f;
+        v = v*2.0f - 1.0f;
 
-    // write output vertex
-    pos[y*width+x] = make_float4(u, w, v, 1.0f);
+        // write output vertex
+        pos[x] = make_float4(u, 0.0f, v, 1.0f);
+    }
 }
 
 
-void launch_kernel(float4 *pos, unsigned int mesh_width,
-                   unsigned int mesh_height, float time)
+void launch_kernel(float4 *pos)
 {
     // execute the kernel
-    dim3 block(8, 8, 1);
-    dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
-    simple_vbo_kernel<<< grid, block>>>(pos, mesh_width, mesh_height, time);
+    dim3 block(1024, 1, 1);
+    dim3 grid(dSwarm.size() / block.x + dSwarm.size() % block.x ? 1 : 0, 1, 1);
+    simple_vbo_kernel<<< grid, block>>>(pos, thrust::raw_pointer_cast(dSwarm.data()), dSwarm.size());
 }
 
 bool checkHW(char *name, const char *gpuType, int dev)
@@ -234,25 +224,11 @@ int findGraphicsGPU(char *name)
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-    char *ref_file = NULL;
-
-    pArgc = &argc;
-    pArgv = argv;
-
     printf("%s starting...\n", sSDKsample);
-
-    if (argc > 1)
-    {
-        if (checkCmdLineFlag(argc, (const char **)argv, "file"))
-        {
-            // In this mode, we are running non-OpenGL and doing a compare of the VBO was generated correctly
-            getCmdLineArgumentString(argc, (const char **)argv, "file", (char **)&ref_file);
-        }
-    }
 
     printf("\n");
 
-    runTest(argc, argv, ref_file);
+    runTest(argc, argv);
 
     cudaDeviceReset();
     printf("%s completed, returned %s\n", sSDKsample, (g_TotalErrors == 0) ? "OK" : "ERROR!");
@@ -323,67 +299,51 @@ bool initGL(int *argc, char **argv)
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
-bool runTest(int argc, char **argv, char *ref_file)
+bool runTest(int argc, char **argv)
 {
+
     // Create the CUTIL timer
     sdkCreateTimer(&timer);
 
-    // command line mode only
-    if (ref_file != NULL)
+    // First initialize OpenGL context, so we can properly set the GL for CUDA.
+    // This is necessary in order to achieve optimal performance with OpenGL/CUDA interop.
+    if (false == initGL(&argc, argv))
     {
-        // This will pick the best possible CUDA capable device
-        int devID = findCudaDevice(argc, (const char **)argv);
-
-        // create VBO
-        checkCudaErrors(cudaMalloc((void **)&d_vbo_buffer, mesh_width*mesh_height*4*sizeof(float)));
-
-        // run the cuda part
-        runAutoTest(devID, argv, ref_file);
-
-        // check result of Cuda step
-        checkResultCuda(argc, argv, vbo);
-
-        cudaFree(d_vbo_buffer);
-        d_vbo_buffer = NULL;
+        return false;
     }
-    else
+
+    // use command-line specified CUDA device, otherwise use device with highest Gflops/s
+    if (checkCmdLineFlag(argc, (const char **)argv, "device"))
     {
-        // First initialize OpenGL context, so we can properly set the GL for CUDA.
-        // This is necessary in order to achieve optimal performance with OpenGL/CUDA interop.
-        if (false == initGL(&argc, argv))
+        if (gpuGLDeviceInit(argc, (const char **)argv) == -1)
         {
             return false;
         }
-
-        // use command-line specified CUDA device, otherwise use device with highest Gflops/s
-        if (checkCmdLineFlag(argc, (const char **)argv, "device"))
-        {
-            if (gpuGLDeviceInit(argc, (const char **)argv) == -1)
-            {
-                return false;
-            }
-        }
-        else
-        {
-            cudaGLSetGLDevice(gpuGetMaxGflopsDeviceId());
-        }
-
-        // register callbacks
-        glutDisplayFunc(display);
-        glutKeyboardFunc(keyboard);
-        glutMouseFunc(mouse);
-        glutMotionFunc(motion);
-
-        // create VBO
-        createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
-
-        // run the cuda part
-        runCuda(&cuda_vbo_resource);
-
-        // start rendering mainloop
-        glutMainLoop();
-        atexit(cleanup);
     }
+    else
+    {
+        cudaGLSetGLDevice(gpuGetMaxGflopsDeviceId());
+    }
+
+    // register callbacks
+    glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+
+    // set up swarm
+    setup(dSwarm);
+    quadTree = QuadTree(dSwarm);
+
+    // create VBO
+    createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
+
+    // run the cuda part
+    runCuda(&cuda_vbo_resource);
+
+    // start rendering mainloop
+    glutMainLoop();
+    atexit(cleanup);
 
     return true;
 }
@@ -406,7 +366,7 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     //    dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
     //    kernel<<< grid, block>>>(dptr, mesh_width, mesh_height, g_fAnim);
 
-    launch_kernel(dptr, mesh_width, mesh_height, g_fAnim);
+    launch_kernel(dptr);
 
     // unmap buffer object
     checkCudaErrors(cudaGraphicsUnmapResources(1, vbo_resource, 0));
@@ -433,34 +393,6 @@ void sdkDumpBin2(void *data, unsigned int bytes, const char *filename)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//! Run the Cuda part of the computation
-////////////////////////////////////////////////////////////////////////////////
-void runAutoTest(int devID, char **argv, char *ref_file)
-{
-    char *reference_file = NULL;
-    void *imageData = malloc(mesh_width*mesh_height*sizeof(float));
-
-    // execute the kernel
-    launch_kernel((float4 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim);
-
-    cudaDeviceSynchronize();
-    getLastCudaError("launch_kernel failed");
-
-    checkCudaErrors(cudaMemcpy(imageData, d_vbo_buffer, mesh_width*mesh_height*sizeof(float), cudaMemcpyDeviceToHost));
-
-    sdkDumpBin2(imageData, mesh_width*mesh_height*sizeof(float), "simpleGL.bin");
-    reference_file = sdkFindFilePath(ref_file, argv[0]);
-
-    if (reference_file &&
-        !sdkCompareBin2BinFloat("simpleGL.bin", reference_file,
-                                mesh_width*mesh_height*sizeof(float),
-                                MAX_EPSILON_ERROR, THRESHOLD, pArgv[0]))
-    {
-        g_TotalErrors++;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
 //! Create VBO
 ////////////////////////////////////////////////////////////////////////////////
 void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
@@ -473,7 +405,7 @@ void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
     glBindBuffer(GL_ARRAY_BUFFER, *vbo);
 
     // initialize buffer object
-    unsigned int size = mesh_width * mesh_height * 4 * sizeof(float);
+    unsigned int size = dSwarm.size() * 4 * sizeof(float);
     glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -506,9 +438,11 @@ void display()
 {
     sdkStartTimer(&timer);
 
+    swarmStep(dSwarm, quadTree, timeStep);
     // run CUDA kernel to generate vertex positions
     runCuda(&cuda_vbo_resource);
 
+#ifndef CONSOLE    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // set view matrix
@@ -524,12 +458,13 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
+    glDrawArrays(GL_POINTS, 0, dSwarm.size());
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
+#endif
 
-    g_fAnim += 0.01f;
+    g_fAnim += timeStep;
 
     sdkStopTimer(&timer);
     computeFPS();
@@ -601,40 +536,4 @@ void motion(int x, int y)
 
     mouse_old_x = x;
     mouse_old_y = y;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//! Check if the result is correct or write data to file for external
-//! regression testing
-////////////////////////////////////////////////////////////////////////////////
-void checkResultCuda(int argc, char **argv, const GLuint &vbo)
-{
-    if (!d_vbo_buffer)
-    {
-        cudaGraphicsUnregisterResource(cuda_vbo_resource);
-
-        // map buffer object
-        glBindBuffer(GL_ARRAY_BUFFER_ARB, vbo);
-        float *data = (float *) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
-
-        // check result
-        if (checkCmdLineFlag(argc, (const char **) argv, "regression"))
-        {
-            // write file for regression test
-            sdkWriteFile<float>("./data/regression.dat",
-                                data, mesh_width * mesh_height * 3, 0.0, false);
-        }
-
-        // unmap GL buffer object
-        if (!glUnmapBuffer(GL_ARRAY_BUFFER))
-        {
-            fprintf(stderr, "Unmap buffer failed.\n");
-            fflush(stderr);
-        }
-
-        checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
-                                                     cudaGraphicsMapFlagsWriteDiscard));
-
-        SDK_CHECK_ERROR_GL();
-    }
 }
