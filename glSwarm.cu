@@ -73,7 +73,7 @@ float g_fAnim = 0.0;
 // mouse controls
 int mouse_old_x, mouse_old_y;
 int mouse_buttons = 0;
-float rotate_x = 0.0, rotate_y = 0.0;
+float rotate_x = 90.0, rotate_y = 0.0;
 float translate_z = -3.0;
 
 StopWatchInterface *timer = NULL;
@@ -133,8 +133,15 @@ __global__ void simple_vbo_kernel(float4 *pos, SwarmAgent *agents, unsigned int 
         u = u*2.0f - 1.0f;
         v = v*2.0f - 1.0f;
 
-        // write output vertex
-        pos[x] = make_float4(u, 0.0f, v, 1.0f);
+        if (temp.alive)
+        {
+            // write output vertex
+            pos[x] = make_float4(u, 0.0f, v, 1.0f);
+        }
+        else
+        {
+            pos[x] = make_float4(0.0f, -10.0f, 0.0f, 1.0f);
+        }
     }
 }
 
