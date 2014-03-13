@@ -128,8 +128,8 @@ __global__ void simple_vbo_kernel(float4 *pos, SwarmAgent *agents, unsigned int 
         SwarmAgent &temp = agents[x];
 
         // calculate uv coordinates
-        float u = (int)temp.position.x / temp.maxPosition().x;
-        float v = (int)temp.position.y / temp.maxPosition().y;
+        float u = temp.position.x / temp.maxPosition().x;
+        float v = temp.position.y / temp.maxPosition().y;
         u = u*2.0f - 1.0f;
         v = v*2.0f - 1.0f;
 
