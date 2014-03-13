@@ -1,4 +1,5 @@
 #include "swarmDriver.h"
+#include <cfloat>
 
 // from fun_with_points
 __host__ __device__
@@ -51,7 +52,7 @@ struct AgentUpdate {
 			/*SwarmAgent *closestTeam = NULL;
 			float closestTeamDist = VIEW_DISTANCE;*/
 			SwarmAgent *closestEnemy = NULL;
-			float closestEnemyDist = VIEW_DISTANCE;
+			float closestEnemyDist = FLT_MAX;
 
 			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
 			{
