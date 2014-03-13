@@ -1,8 +1,8 @@
 #ifndef _SWARM_AGENT_H_
 #define _SWARM_AGENT_H_
 
-__constant__ int2 D_MAX_POSITION = {80, 30};
-const int2 H_MAX_POSITION = {80, 30};
+__constant__ int2 D_MAX_POSITION = {30, 30};
+const int2 H_MAX_POSITION = {30, 30};
 
 struct SwarmAgent {
 	float2 position;
