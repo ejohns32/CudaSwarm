@@ -5,6 +5,6 @@
 
 #include "swarmAgent.h"
 
-void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm, const float time);
+void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm);
 
 #endif

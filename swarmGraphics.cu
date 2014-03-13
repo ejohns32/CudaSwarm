@@ -3,7 +3,8 @@
 
 #include "swarmGraphics.h"
 
-void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm, const float time) {
+void drawSwarm(const thrust::device_vector<SwarmAgent> &dSwarm)
+{
 	thrust::host_vector<SwarmAgent> hSwarm = dSwarm;
 	char display[H_MAX_POSITION.y][H_MAX_POSITION.x];
 
