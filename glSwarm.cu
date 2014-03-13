@@ -99,8 +99,7 @@ void cleanup();
 
 // GL functionality
 bool initGL(int *argc, char **argv);
-void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
-               unsigned int vbo_res_flags);
+void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res);
 void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res);
 
 // rendering callbacks
@@ -342,7 +341,7 @@ bool runTest(int argc, char **argv)
     quadTree = QuadTree(dSwarm);
 
     // create VBO
-    createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
+    createVBO(&vbo, &cuda_vbo_resource);
 
     // run the cuda part
     runCuda(&cuda_vbo_resource);
@@ -401,8 +400,7 @@ void sdkDumpBin2(void *data, unsigned int bytes, const char *filename)
 ////////////////////////////////////////////////////////////////////////////////
 //! Create VBO
 ////////////////////////////////////////////////////////////////////////////////
-void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
-               unsigned int vbo_res_flags)
+void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res)
 {
     assert(vbo);
 
@@ -417,7 +415,7 @@ void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // register this buffer object with CUDA
-    checkCudaErrors(cudaGraphicsGLRegisterBuffer(vbo_res, *vbo, vbo_res_flags));
+    checkCudaErrors(cudaGraphicsGLRegisterBuffer(vbo_res, *vbo, cudaGraphicsMapFlagsWriteDiscard));
 
     SDK_CHECK_ERROR_GL();
 }
@@ -427,7 +425,6 @@ void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
 ////////////////////////////////////////////////////////////////////////////////
 void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
 {
-
     // unregister this buffer object with CUDA
     cudaGraphicsUnregisterResource(vbo_res);
 
