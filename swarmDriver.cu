@@ -23,7 +23,7 @@ struct SpawnTeam {
 	__host__ __device__ SwarmAgent operator()(unsigned int i) {
 		uint8_t team = i / numPerTeam;
 
-		return SwarmAgent(team, (hashRand(i) + team) * SwarmAgent::maxPosition().x / numTeams, hashRand(i + total) * SwarmAgent::maxPosition().y, cos(2 * CUDART_PI_F * hashRand(i + 2 * total)), sin(2 * CUDART_PI_F * hashRand(i + 2 * total)));
+		return SwarmAgent(team, (hashRand(i)) * SwarmAgent::maxPosition().x, hashRand(i + total) * SwarmAgent::maxPosition().y, cos(2 * CUDART_PI_F * hashRand(i + 2 * total)), sin(2 * CUDART_PI_F * hashRand(i + 2 * total)));
 	}
 };
 
