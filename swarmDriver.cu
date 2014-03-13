@@ -109,15 +109,15 @@ struct AgentAlive {
 
 	AgentAlive(SubSwarm subSwarm) : subSwarm(subSwarm) {}
 
-	__host__ __device__ void operator()(SwarmAgent &agent) {
+	__device__ void operator()(SwarmAgent &agent) {
 		if (agent.alive) {
+			bool gunnaDie = false;
 			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
 			{
-				if (itr != &agent && itr->alive && (int)itr->position.x == (int)agent.position.x && (int)itr->position.y == (int)agent.position.y)
-				{
-					agent.alive = false; // race condition with itr->alive in if (feature-bug: only one dies, so there's a winner)
-				}
+				gunnaDie |= itr != &agent && itr->alive && itr->team != agent.team && itr->distance(agent.position.x, agent.position.y) < 0.01f;
 			}
+			__syncthreads();
+			agent.alive = !gunnaDie;
 		}
 	}
 };
