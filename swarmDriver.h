@@ -9,7 +9,7 @@
 #include "swarmGraphics.h"
 
 const int NUM_TEAMS = 2;
-const int NUM_AGENTS_PER_TEAM = 32;
+const int NUM_AGENTS_PER_TEAM = 128;
 
 const float VIEW_DISTANCE = 10;
 const float TEAM_DISTANCE = 2;
