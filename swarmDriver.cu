@@ -48,8 +48,8 @@ struct AgentUpdate {
 
 	__host__ __device__ void operator()(SwarmAgent &agent) {
 		if (agent.alive) {
-			SwarmAgent *closestTeam = NULL;
-			float closestTeamDist = VIEW_DISTANCE;
+			/*SwarmAgent *closestTeam = NULL;
+			float closestTeamDist = VIEW_DISTANCE;*/
 			SwarmAgent *closestEnemy = NULL;
 			float closestEnemyDist = VIEW_DISTANCE;
 
@@ -58,11 +58,11 @@ struct AgentUpdate {
 				if (itr != &agent && itr->alive)
 				{
 					float dist = itr->distance(agent.position.x, agent.position.y);
-					if (itr->team == agent.team && dist < closestTeamDist)
+					/*if (itr->team == agent.team && dist < closestTeamDist)
 					{
 						closestTeamDist = dist;
 						closestTeam = itr;
-					} else if (itr->team != agent.team && dist < closestEnemyDist) {
+					} else*/ if (itr->team != agent.team && dist < closestEnemyDist) {
 						closestEnemyDist = dist;
 						closestEnemy = itr;
 					}
@@ -78,17 +78,17 @@ struct AgentUpdate {
 				agent.velocity.x = cos(angle);
 				agent.velocity.y = sin(angle);
 			}
-
+/*
 			if (closestTeam != NULL) {
 				float xDif = closestTeam->position.x - agent.position.x;
 				float yDif = closestTeam->position.y - agent.position.y;
 
-				if (sgn(xDif) == sgn(agent.velocity.x) && abs(xDif) < TEAM_DISTANCE) {
+				if (sgn(xDif) == sgn(agent.velocity.x) && sgn(agent.velocity.x) == -sgn(closestTeam->velocity.x) && abs(xDif) < TEAM_DISTANCE) {
 					agent.velocity.x = -agent.velocity.x;
-				} else if (sgn(yDif) == sgn(agent.velocity.y) && abs(yDif) < TEAM_DISTANCE) {
+				} else if (sgn(yDif) == sgn(agent.velocity.y) && sgn(agent.velocity.y) == -sgn(closestTeam->velocity.y) && abs(yDif) < TEAM_DISTANCE) {
 					agent.velocity.y = -agent.velocity.y;
 				}
-			}
+			}*/
 
 			agent.update(timeStep);
 		}
