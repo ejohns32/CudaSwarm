@@ -464,7 +464,9 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    glDrawArrays(GL_POINTS, 0, dSwarm.size());
+    glDrawArrays(GL_POINTS, 0, NUM_AGENTS_PER_TEAM);
+    glColor3f(0.0, 1.0, 0.0);
+    glDrawArrays(GL_POINTS, NUM_AGENTS_PER_TEAM, NUM_AGENTS_PER_TEAM);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
