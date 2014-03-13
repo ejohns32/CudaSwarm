@@ -74,7 +74,7 @@ float g_fAnim = 0.0;
 int mouse_old_x, mouse_old_y;
 int mouse_buttons = 0;
 float rotate_x = 90.0, rotate_y = 0.0;
-float translate_z = -3.0;
+float translate_z = -2.0;
 
 StopWatchInterface *timer = NULL;
 
