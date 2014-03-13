@@ -68,7 +68,6 @@ GLuint vbo;
 struct cudaGraphicsResource *cuda_vbo_resource;
 void *d_vbo_buffer = NULL;
 
-const float timeStep = 0.01f;
 float g_fAnim = 0.0;
 
 // mouse controls
@@ -436,13 +435,13 @@ void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
 ////////////////////////////////////////////////////////////////////////////////
 void display()
 {
+    float timeStep = 0.01f;
     sdkStartTimer(&timer);
 
     swarmStep(dSwarm, quadTree, timeStep);
     // run CUDA kernel to generate vertex positions
     runCuda(&cuda_vbo_resource);
-
-#ifndef CONSOLE    
+   
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // set view matrix
@@ -462,11 +461,11 @@ void display()
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
-#endif
 
     g_fAnim += timeStep;
 
     sdkStopTimer(&timer);
+    timeStep = sdkGetTimerValue(&timer);
     computeFPS();
 }
 
