@@ -143,8 +143,6 @@ void updateSwarm(QuadTree &quadTree, float timeStep)
    SwarmAgent *agents = thrust::raw_pointer_cast(quadTree.agents.data());
    int numLeaves = quadTree.leaves.size();
 
-   std::cout << numLeaves << std::endl;
-
    dim3 dimGrid(1024, 1024);
    dim3 dimBlock(32, 1);
    doBATTLE<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves, timeStep);
