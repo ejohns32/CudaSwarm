@@ -46,14 +46,71 @@ __host__ __device__ static int sgn(float val) {
    return (val > 0) - (val < 0);
 }
 
+struct TeamLeafStats
+{
+	int numFriends, numFoes, closestFriend, closestFoe;
+   float closestFriendDist, closestEnemyDist;
+
+   __host__ __device__ TeamLeafStats() : numFriends(0), numFoes(0), closestFriend(0), closestFoe(0), closestFriendDist(FLT_MAX), closestEnemyDist(FLT_MAX) {}
+};
+
+__host__ __device__ TeamLeafStats findClosest(int *indices, SwarmAgent *agents, int me, int min, int max)
+{
+	TeamLeafStats stats;
+
+   for (int itr = min; itr < max; itr++)
+   {
+      if(itr == me || agents[indices[itr]].alive == false) {
+         continue;
+      }
+
+      float dist = agents[indices[me]].distance(agents[indices[itr]].position.x, agents[indices[itr]].position.y);
+      if (agents[indices[me]].team == agents[indices[itr]].team){
+         stats.numFriends++;
+         if(dist < stats.closestFriendDist) {
+            stats.closestFriendDist = dist;
+            stats.closestFriend = itr;
+         }
+      } else {
+         stats.numFoes++;
+         if(dist < stats.closestEnemyDist) {
+            stats.closestEnemyDist = dist;
+            stats.closestFoe = itr;
+         }
+      }
+   }
+
+   return stats;
+}
+
+__host__ __device__ void calcVelocity(int *indices, SwarmAgent *agents, int me, TeamLeafStats stats)
+{
+   if (stats.numFoes) {
+      float xDif = agents[indices[stats.closestFoe]].position.x - (agents[indices[me]].position.x);
+      float yDif = agents[indices[stats.closestFoe]].position.y - (agents[indices[me]].position.y);
+      float angle = atan2f(yDif, xDif);
+
+      // probably want gradual direction changes
+      agents[indices[me]].velocity.x = cos(angle);
+      agents[indices[me]].velocity.y = sin(angle);
+   } 
+   /*if (numFriends) {
+      float xDif = agents[indices[closestFriend]].position.x - agents[indices[me]].position.x;
+      float yDif = agents[indices[closestFriend]].position.y - agents[indices[me]].position.y;
+
+      if (sgn(xDif) == sgn(agents[indices[me]].velocity.x) && abs(xDif) < TEAM_DISTANCE) {
+         agents[indices[me]].velocity.x = -agents[indices[me]].velocity.x;
+      } else if (sgn(yDif) == sgn(agents[indices[me]].velocity.y) && abs(yDif) < TEAM_DISTANCE) {
+         agents[indices[me]].velocity.y = -agents[indices[me]].velocity.y;
+      }
+   }*/
+}
+
 __global__ void doBATTLE(int2 *leaves, int *indices, SwarmAgent *agents, int numLeaves, float timeStep){
    
    int leafIdx = gridDim.x * blockIdx.y + blockIdx.x;
    int index, me;
-   int numFriends = 0, numFoes = 0, min, max, range;
-   int closestFriend = 0, closestFoe = 0, itr = 0;
-   float dist, closestFriendDist = FLT_MAX, closestEnemyDist = FLT_MAX;
-
+   int min, max, range;
 
    if(leafIdx >= numLeaves)
       return;
@@ -66,51 +123,15 @@ __global__ void doBATTLE(int2 *leaves, int *indices, SwarmAgent *agents, int num
    
    if(index >= range)
       return;
-   me = index + min;
-   itr = 0;
-   while (itr < range)
-   {
-      if(itr == index || agents[indices[itr + min]].alive == false){
-         itr++;
-         continue;
-      }
 
-      dist = agents[indices[me]].distance(agents[indices[itr + min]].position.x, agents[indices[itr + min]].position.y);
-      if (itr < range && agents[indices[me]].team == agents[indices[itr + min]].team){
-         numFriends++;
-         if(dist < closestFriendDist) {
-            closestFriendDist = dist;
-            closestFriend = itr + min;
-         }
-      } else if (itr < range){
-         numFoes++;
-         if(dist < closestEnemyDist) {
-            closestEnemyDist = dist;
-            closestFoe = itr + min;
-         }
-      }
-      itr++;
-   }
-   __syncthreads();
-   if (numFoes) {
-      float xDif = agents[indices[closestFoe]].position.x - (agents[indices[me]].position.x);
-      float yDif = agents[indices[closestFoe]].position.y - (agents[indices[me]].position.y);
-      float angle = atan2f(yDif, xDif);
+  	me = min + index;
 
-      // probably want gradual direction changes
-      agents[indices[me]].velocity.x = cos(angle);
-      agents[indices[me]].velocity.y = sin(angle);
-   }/*
-   if (numFriends) {
-      float xDif = agents[indices[closestFriend]].position.x - agents[indices[me]].position.x;
-      float yDif = agents[indices[closestFriend]].position.y - agents[indices[me]].position.y;
+  	if(!agents[indices[me]].alive)
+  		return;
 
-      if (sgn(xDif) == sgn(agents[indices[me]].velocity.x) && abs(xDif) < TEAM_DISTANCE) {
-         agents[indices[me]].velocity.x = -agents[indices[me]].velocity.x;
-      } else if (sgn(yDif) == sgn(agents[indices[me]].velocity.y) && abs(yDif) < TEAM_DISTANCE) {
-         agents[indices[me]].velocity.y = -agents[indices[me]].velocity.y;
-      }
-   }*/
+  	TeamLeafStats stats = findClosest(indices, agents, me, min, max);
+  	__syncthreads();
+  	calcVelocity(indices, agents, me, stats);
    __syncthreads();
    agents[indices[me]].update(timeStep);
 }
@@ -122,20 +143,31 @@ void updateSwarm(QuadTree &quadTree, float timeStep)
    SwarmAgent *agents = thrust::raw_pointer_cast(quadTree.agents.data());
    int numLeaves = quadTree.leaves.size();
 
-   dim3 dimGrid(1024, 1024);
+   std::cout << numLeaves << std::endl;
 
+   dim3 dimGrid(1024, 1024);
    dim3 dimBlock(32, 1);
    doBATTLE<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves, timeStep);
 
 }
 
+__host__ __device__ void killStuff(int *indices, SwarmAgent *agents, int me, TeamLeafStats stats) {
+	if(stats.numFoes > 0 && stats.closestEnemyDist < 0.3f){
+      if(stats.numFriends >= stats.numFoes)
+         agents[indices[stats.closestFoe]].alive = false;
+      else
+         agents[indices[me]].alive = false;
+   }
+   /*if(stats.numFriends > 0 && stats.closestFriendDist < 0.3f){
+      agents[indices[me]].alive = false;
+      agents[indices[stats.closestFriend]].alive = false;
+   }*/
+}
+
 __global__ void getHit(int2 *leaves, int *indices, SwarmAgent *agents, int numLeaves){
    int leafIdx = gridDim.x * blockIdx.y + blockIdx.x;
    int index, me;
-   int numFriends = 0, numFoes = 0, min, max, range;
-   int closestFriend = 0, closestFoe = 0, itr = 0;
-   float dist, closestFriendDist = FLT_MAX, closestEnemyDist = FLT_MAX;
-
+   int min, max, range;
 
    if(leafIdx >= numLeaves)
       return;
@@ -149,63 +181,13 @@ __global__ void getHit(int2 *leaves, int *indices, SwarmAgent *agents, int numLe
    if(index >= range)
       return;
 
-   __syncthreads();
    me = index + min;
-   itr = 0;
    if(agents[indices[me]].alive == false) return;
-   while (itr < range)
-   {
-      if(itr == index || agents[indices[itr + min]].alive == false){
-         itr++;
-         continue;
-      }
-      dist = agents[indices[me]].distance(agents[indices[itr + min]].position.x, agents[indices[itr + min]].position.y);
-      if (itr < range && agents[indices[me]].team == agents[indices[itr + min]].team){
-         if(dist <= 1.0f){
-            numFriends++;
-            if(dist < closestFriendDist) {
-               closestFriendDist = dist;
-               closestFriend = itr;
-            }
-         }
-      } else if (itr < range){
-         if(dist <= 1.0f){
-            numFoes++;
-            if(dist < closestEnemyDist) {
-               closestEnemyDist = dist;
-               closestFoe = itr;
-            }
-         }
-      }
-      itr++;
-   }
+   
+   TeamLeafStats stats = findClosest(indices, agents, me, min, max);
    __syncthreads();
-
-   if(closestEnemyDist < 0.3f){
-      if(numFriends >= numFoes)
-         agents[indices[closestFoe + min]].alive = false;
-      else
-         agents[indices[me]].alive = false;
-   }
-   if(closestFriendDist < 0.3f){
-      agents[indices[me]].alive = false;
-      agents[indices[closestFriend + min]].alive = false;
-   }
-}
-
-struct is_dead
-{
-   __host__ __device__
-      bool operator()(const SwarmAgent &agent)
-      {
-         if(agent.alive)
-            return false;
-         return true;
-      }
-};
-
-void collectTheBodies(QuadTree &tree){
-    tree.agents.erase(thrust::remove_if(tree.agents.begin(), tree.agents.end(), is_dead()), tree.agents.end());
+   killStuff(indices, agents, me, stats);
+   
 }
 
 // not sure this is the best way to do this
@@ -222,6 +204,21 @@ void checkCollisions(QuadTree &quadTree)
 
    dim3 dimBlock(32, 4);
    getHit<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves);
+}
+
+struct is_dead
+{
+   __host__ __device__
+      bool operator()(const SwarmAgent &agent)
+      {
+         if(agent.alive)
+            return false;
+         return true;
+      }
+};
+
+void collectTheBodies(QuadTree &tree){
+    tree.agents.erase(thrust::remove_if(tree.agents.begin(), tree.agents.end(), is_dead()), tree.agents.end());
 }
 
 void swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, float timeStep)
