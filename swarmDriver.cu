@@ -143,8 +143,8 @@ void updateSwarm(QuadTree &quadTree, float timeStep)
    SwarmAgent *agents = thrust::raw_pointer_cast(quadTree.agents.data());
    int numLeaves = quadTree.leaves.size();
 
-   dim3 dimGrid(1024, 1024);
-   dim3 dimBlock(32, 1);
+   dim3 dimGrid((numLeaves / 1024) + ((numLeaves % 1024) ? 1 : 0), 1024);
+   dim3 dimBlock(32, 4);
    doBATTLE<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves, timeStep);
 
 }
@@ -197,8 +197,7 @@ void checkCollisions(QuadTree &quadTree)
 
    int numLeaves = quadTree.leaves.size();
    
-   dim3 dimGrid(1024, (numLeaves / 1024) + ((numLeaves % 1024) ? 1 : 0));
-   
+   dim3 dimGrid((numLeaves / 1024) + ((numLeaves % 1024) ? 1 : 0), 1024);
 
    dim3 dimBlock(32, 4);
    getHit<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves);
