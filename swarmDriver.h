@@ -6,7 +6,6 @@
 
 #include "swarmAgent.h"
 #include "swarmQuad.h"
-#include "swarmGraphics.h"
 
 const float VIEW_DISTANCE = 10;
 const float TEAM_DISTANCE = 2;

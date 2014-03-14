@@ -138,7 +138,4 @@ void swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, fl
 	updateSwarm(quadTree, dSwarm, timeStep);
 	quadTree.update();
 	checkCollisions(quadTree, dSwarm);
-#ifdef CONSOLE
-	drawSwarm(dSwarm);
-#endif
 }
