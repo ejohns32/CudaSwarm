@@ -1,19 +1,3 @@
-#include <thrust/device_vector.h>
-#include <thrust/tabulate.h>
-#include <thrust/random.h>
-#include <thrust/transform.h>
-#include <thrust/transform_scan.h>
-#include <thrust/sort.h>
-#include <thrust/reduce.h>
-#include <thrust/sequence.h>
-#include <thrust/binary_search.h>
-#include <thrust/iterator/constant_iterator.h>
-#include <iostream>
-#include <iomanip>
-#include <bitset>
-#include <algorithm>
-#include <cfloat>
-
 #include "swarmQuad2.h"
 
 // Utility functions to encode leaves and children in single int
@@ -26,6 +10,10 @@
 //   int get_leaf_offset(int id);
 //   int child_tag_mask(int tag, int which_child, int level, int max_level);
 
+bbox compute_bounding_box(const thrust::device_vector<SwarmAgent> &points)
+{
+  return thrust::reduce(points.begin(), points.end(), bbox(), merge_bboxes());
+}
 
 void compute_tags(const thrust::device_vector<SwarmAgent> &points, const bbox &bounds, int max_level, thrust::device_vector<int> &tags)
 {
@@ -170,7 +158,7 @@ void create_leaves(const thrust::device_vector<int> &child_node_kind,
                      child_node_kind.begin(),
                      leaves.begin() + children_begin,
                      is_a<LEAF>());
-}
+} 
 
 
 void activate_nodes_for_next_level(const thrust::device_vector<int> &children,
@@ -209,7 +197,6 @@ void QuadTree::buildTree(){
   tags.resize(num_points, 0);
   
   compute_tags(agents, bounds, maxLevel, tags);
-
   /******************************************
    * 3. Sort according to classification    *
    ******************************************/
@@ -217,7 +204,6 @@ void QuadTree::buildTree(){
   indices.resize(num_points, 0);
 
   sort_points_by_tag(tags, indices);
-
   /******************************************
    * 4. Build the tree                      *
    ******************************************/
@@ -263,7 +249,7 @@ void QuadTree::buildTree(){
     // Enumerate nodes and leaves at this level
     std::pair<int,int> num_nodes_and_leaves_on_this_level =
       enumerate_nodes_and_leaves(child_node_kind, nodes_on_this_level, leaves_on_this_level);
-
+ 
     /******************************************
      * 9. Add the children to the node list   *
      ******************************************/
@@ -275,7 +261,7 @@ void QuadTree::buildTree(){
      ******************************************/
 
     create_leaves(child_node_kind, leaves_on_this_level, lower_bounds, upper_bounds, num_nodes_and_leaves_on_this_level.second, leaves);
-
+ 
     /******************************************
      * 11. Set the nodes for the next level    *
      ******************************************/
