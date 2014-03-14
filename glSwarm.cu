@@ -249,7 +249,7 @@ void computeFPS()
     avgFPS = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
 
     char fps[256];
-    sprintf(fps, "Cuda Swarm: %d agents %3.1f fps", numTeams * numAgentsPerTeam, avgFPS);
+    sprintf(fps, "Cuda Swarm: %d agents %3.1f fps", dSwarm.size(), avgFPS);
     glutSetWindowTitle(fps);
 }
 
