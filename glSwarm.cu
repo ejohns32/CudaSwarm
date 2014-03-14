@@ -245,20 +245,10 @@ int main(int argc, char **argv)
 
 void computeFPS()
 {
-    frameCount++;
-    fpsCount++;
-
-    if (fpsCount == fpsLimit)
-    {
-        avgFPS = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
-        fpsCount = 0;
-        fpsLimit = (int)MAX(avgFPS, 1.f);
-
-        sdkResetTimer(&timer);
-    }
+    avgFPS = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
 
     char fps[256];
-    sprintf(fps, "Cuda Swarm: %d agents %3.1f fps (Max 100Hz)", numTeams * numAgentsPerTeam, avgFPS);
+    sprintf(fps, "Cuda Swarm: %d agents %3.1f fps", numTeams * numAgentsPerTeam, avgFPS);
     glutSetWindowTitle(fps);
 }
 
@@ -342,7 +332,6 @@ bool runTest(int argc, char **argv)
 
     // set up swarm
     swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
-    quadTree.buildTree();
 
     // create VBO
     createVBO(&vbo, &cuda_vbo_resource);
@@ -516,7 +505,6 @@ void special(int key, int, int)
         case GLUT_KEY_UP:
             numAgentsPerTeam *= 2;
             swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
-            quadTree.buildTree();
             deleteVBO(&vbo, cuda_vbo_resource);
             createVBO(&vbo, &cuda_vbo_resource);
             break;
@@ -526,7 +514,6 @@ void special(int key, int, int)
             if (numAgentsPerTeam  < 1)
                 numAgentsPerTeam = 1;
             swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
-            quadTree.buildTree();
             deleteVBO(&vbo, cuda_vbo_resource);
             createVBO(&vbo, &cuda_vbo_resource);
             break;
