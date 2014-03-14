@@ -1,16 +1,10 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <thrust/tabulate.h>
 #include <math_constants.h>
-#include "swarmAgent.h"
-#include "swarmQuad2.h"
-#include "swarmGraphics.h"
-const int NUM_TEAMS = 2;
-const int NUM_AGENTS_PER_TEAM = 32;
-
-const float TEAM_DISTANCE = 2;
+#include <cfloat>
+#include "swarmDriver.h"
 
 // from fun_with_points
 __host__ __device__
@@ -35,15 +29,15 @@ struct SpawnTeam {
 	__host__ __device__ SwarmAgent operator()(unsigned int i) {
 		uint8_t team = i / numPerTeam;
 
-		return SwarmAgent(team, (hashRand(i) + team) * SwarmAgent::maxPosition().x / numTeams, hashRand(i + total) * SwarmAgent::maxPosition().y, cos(2 * CUDART_PI_F * hashRand(i + 2 * total)), sin(2 * CUDART_PI_F * hashRand(i + 2 * total)));
+		return SwarmAgent(team, (hashRand(i)) * SwarmAgent::maxPosition().x, hashRand(i + total) * SwarmAgent::maxPosition().y, cos(2 * CUDART_PI_F * hashRand(i + 2 * total)), sin(2 * CUDART_PI_F * hashRand(i + 2 * total)));
 	}
 };
 
-void setup(thrust::device_vector<SwarmAgent> &dSwarm)
+void swarmSetup(thrust::device_vector<SwarmAgent> &dSwarm, unsigned int numTeams, unsigned int numAgentsPerTeam)
 {
-	thrust::host_vector<SwarmAgent> hSwarm(NUM_TEAMS * NUM_AGENTS_PER_TEAM);
+	thrust::host_vector<SwarmAgent> hSwarm(numTeams * numAgentsPerTeam);
 
-	thrust::tabulate(hSwarm.begin(), hSwarm.end(), SpawnTeam(NUM_TEAMS, NUM_AGENTS_PER_TEAM));
+	thrust::tabulate(hSwarm.begin(), hSwarm.end(), SpawnTeam(numTeams, numAgentsPerTeam));
 
 	dSwarm = hSwarm;
 }
@@ -120,7 +114,6 @@ __global__ void doBATTLE(int2 *leaves, int *indices, SwarmAgent *agents, int num
    agents[indices[me]].update(timeStep);
 }
 
-
 void updateSwarm(QuadTree &quadTree, float timeStep)
 {
    int2 *leaves = thrust::raw_pointer_cast(quadTree.leaves.data());
@@ -145,15 +138,15 @@ struct AgentAlive {
 
 	AgentAlive(SubSwarm subSwarm) : subSwarm(subSwarm) {}
 
-	__host__ __device__ void operator()(SwarmAgent &agent) {
+	__device__ void operator()(SwarmAgent &agent) {
 		if (agent.alive) {
+			bool gunnaDie = false;
 			for (SwarmAgent *itr = subSwarm.begin(); itr != subSwarm.end(); ++itr)
 			{
-				if (itr != &agent && itr->alive && (int)itr->position.x == (int)agent.position.x && (int)itr->position.y == (int)agent.position.y)
-				{
-					agent.alive = false; // race condition with itr->alive in if (feature-bug: only one dies, so there's a winner)
-				}
+				gunnaDie |= itr != &agent && itr->alive && itr->team != agent.team && itr->distance(agent.position.x, agent.position.y) < 0.01f;
 			}
+			__syncthreads();
+			agent.alive = !gunnaDie;
 		}
 	}
 };*/
@@ -249,30 +242,10 @@ void checkCollisions(QuadTree &quadTree)
    getHit<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves);
 }
 
-void swarmLoop(thrust::device_vector<SwarmAgent> &dSwarm, float timeStep)
+void swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, float timeStep)
 {
-	QuadTree quadTree = QuadTree(dSwarm, 10, 32);
-   quadTree.buildTree();
-
-	float time = 0.0f;
-
-	while(true)
-	{
-		updateSwarm(quadTree, timeStep);
-		//checkCollisions(quadTree);
-      //collectTheBodies(quadTree);
-   	drawSwarm(dSwarm, time);
-      quadTree.buildTree();
-		usleep(timeStep * 1000 * 1000);
-		time += timeStep;
-	}
-}
-
-int main()
-{
-	thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
-	setup(dSwarm);
-	swarmLoop(dSwarm, 0.1f);
-
-	return 0;
+	updateSwarm(quadTree, timeStep);
+	//checkCollisions(quadTree);
+	//collectTheBodies(quadTree);
+	quadTree.buildTree();
 }

@@ -8,10 +8,7 @@ GLCFLAGS=-ccbin g++ -m64
 GLIFLAGS=-Icommon/inc
 GLDFLAGS=-Lcommon/lib/linux/x86_64 -L/usr/lib64/nvidia -lGL -lGLU -lX11 -lXi -lXmu -lglut -lGLEW
 
-all: gpu_swarm
-
-swarmGraphics.o: swarmGraphics.cu swarmGraphics.h swarmAgent.h 
-	nvcc -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA $(NVFLAGS) $(IFLAGS) $<
+all: consoleSwarm glSwarm
 
 swarmQuad.o: swarmQuad2.cu swarmQuad2.h swarmAgent.h
 	nvcc -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA $(NVFLAGS) $(IFLAGS) $<
@@ -19,17 +16,20 @@ swarmQuad.o: swarmQuad2.cu swarmQuad2.h swarmAgent.h
 swarmAgent.o: swarmAgent.cu swarmAgent.h
 	nvcc -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA $(NVFLAGS) $(IFLAGS) $<
 
-swarmDriver.o: swarmDriver.cu swarmAgent.h swarmQuad2.h swarmGraphics.h
+swarmDriver.o: swarmDriver.cu swarmDriver.h swarmAgent.h swarmQuad2.h
 	nvcc -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA $(NVFLAGS) $(IFLAGS) $<
 
-gpu_swarm: swarmDriver.o swarmAgent.o swarmQuad.o swarmGraphics.o
-	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
+consoleSwarm.o: consoleSwarm.cu swarmDriver.h swarmAgent.h swarmQuad2.h
+	nvcc -o $@ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA $(NVFLAGS) $(IFLAGS) $<
 
-simpleGL.o: simpleGL.cu
+glSwarm.o: glSwarm.cu swarmDriver.h swarmAgent.h swarmQuad2.h
 	/usr/local/cuda-5.5/bin/nvcc -o $@ -c $< $(GLCFLAGS) $(GLIFLAGS)
 
-simpleGL: simpleGL.o
+consoleSwarm: consoleSwarm.o swarmDriver.o swarmAgent.o swarmQuad.o
+	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+glSwarm: glSwarm.o swarmDriver.o swarmAgent.o swarmQuad.o
 	/usr/local/cuda-5.5/bin/nvcc -o $@ $^ $(GLCFLAGS) $(GLDFLAGS)
 
 clean:
-	rm -f gpu_swarm swarmAgent.o swarmQuad.o swarmGraphics.o swarmDriver.o simpleGL simpleGL.o
+	rm -f consoleSwarm glSwarm swarmAgent.o swarmQuad.o swarmDriver.o consoleSwarm.o glSwarm.o
