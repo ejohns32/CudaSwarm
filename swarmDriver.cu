@@ -21,10 +21,10 @@ float hashRand(unsigned int x)
 
 struct SpawnTeam {
 	uint8_t numTeams;
-	uint16_t numPerTeam;
+	uint32_t numPerTeam;
 	uint32_t total;
 
-	SpawnTeam(uint8_t numTeams, uint16_t numPerTeam) : numTeams(numTeams), numPerTeam(numPerTeam), total(numTeams * numPerTeam) {}
+	SpawnTeam(uint8_t numTeams, uint32_t numPerTeam) : numTeams(numTeams), numPerTeam(numPerTeam), total(numTeams * numPerTeam) {}
 
 	__host__ __device__ SwarmAgent operator()(unsigned int i) {
 		uint8_t team = i / numPerTeam;
@@ -120,16 +120,12 @@ void updateSwarm(QuadTree &quadTree, float timeStep)
    int2 *leaves = thrust::raw_pointer_cast(quadTree.leaves.data());
    int *indices = thrust::raw_pointer_cast(quadTree.indices.data());
    SwarmAgent *agents = thrust::raw_pointer_cast(quadTree.agents.data());
-   SwarmAgent agent;
-   SwarmAgent agent2;
    int numLeaves = quadTree.leaves.size();
 
    dim3 dimGrid(1024, 1024);
 
-   dim3 dimBlock(32, 32);
+   dim3 dimBlock(32, 1);
    doBATTLE<<<dimGrid, dimBlock>>>(leaves, indices, agents, numLeaves, timeStep);
-   agent = quadTree.agents[0];
-   cudaMemcpy((void *)(&agent2), (void *)agents, sizeof(SwarmAgent), cudaMemcpyDeviceToHost);
 
 }
 
@@ -153,7 +149,6 @@ __global__ void getHit(int2 *leaves, int *indices, SwarmAgent *agents, int numLe
    if(index >= range)
       return;
 
-   __shared__ SwarmAgent agentsOnLeaf[128];
    __syncthreads();
    me = index + min;
    itr = 0;
@@ -165,7 +160,7 @@ __global__ void getHit(int2 *leaves, int *indices, SwarmAgent *agents, int numLe
          continue;
       }
       dist = agents[indices[me]].distance(agents[indices[itr + min]].position.x, agents[indices[itr + min]].position.y);
-      if (itr < range && agents[indices[me]].team == agentsOnLeaf[itr].team){
+      if (itr < range && agents[indices[me]].team == agents[indices[itr + min]].team){
          if(dist <= 1.0f){
             numFriends++;
             if(dist < closestFriendDist) {
