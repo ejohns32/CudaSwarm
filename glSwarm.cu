@@ -62,6 +62,7 @@ const unsigned int window_height = 512;
 // swarm data
 unsigned int numTeams = 2;
 unsigned int numAgentsPerTeam = 32;
+unsigned int teamCutoff = numAgentsPerTeam;
 thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
 QuadTree quadTree = QuadTree(dSwarm, 32);
 
@@ -435,7 +436,8 @@ void display()
     float timeStep = 0.01f;
     sdkStartTimer(&timer);
 
-    swarmStep(dSwarm, quadTree, timeStep);
+    
+    teamCutoff = swarmStep(dSwarm, quadTree, timeStep);
     // run CUDA kernel to generate vertex positions
     runCuda(&cuda_vbo_resource);
    
@@ -454,9 +456,9 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    glDrawArrays(GL_POINTS, 0, numAgentsPerTeam);
+    glDrawArrays(GL_POINTS, 0, teamCutoff);
     glColor3f(0.0, 1.0, 0.0);
-    glDrawArrays(GL_POINTS, numAgentsPerTeam, numAgentsPerTeam);
+    glDrawArrays(GL_POINTS, teamCutoff, dSwarm.size() - teamCutoff);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();

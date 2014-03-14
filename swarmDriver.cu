@@ -221,10 +221,12 @@ void collectTheBodies(QuadTree &tree){
     tree.agents.erase(thrust::remove_if(tree.agents.begin(), tree.agents.end(), is_dead()), tree.agents.end());
 }
 
-void swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, float timeStep)
+unsigned int swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, float timeStep)
 {
 	updateSwarm(quadTree, timeStep);
 	checkCollisions(quadTree);
 	//collectTheBodies(quadTree);
 	quadTree.buildTree();
+
+	return dSwarm.size() / 2;
 }
