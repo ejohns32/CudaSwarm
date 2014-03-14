@@ -35,12 +35,9 @@ struct SpawnTeam {
 
 void swarmSetup(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, unsigned int numTeams, unsigned int numAgentsPerTeam)
 {
-	//thrust::host_vector<SwarmAgent> hSwarm(numTeams * numAgentsPerTeam);
 	dSwarm.resize(numTeams * numAgentsPerTeam);
 
 	thrust::tabulate(dSwarm.begin(), dSwarm.end(), SpawnTeam(numTeams, numAgentsPerTeam));
-
-	//dSwarm = hSwarm;
 
     quadTree.setMaxLevel(1 + log(numTeams * numAgentsPerTeam / 32) / log(4));
 }
