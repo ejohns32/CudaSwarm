@@ -1,8 +1,21 @@
 #ifndef _SWARM_QUAD_H_
 #define _SWARM_QUAD_H_
 
+#include <thrust/sequence.h>
+#include <cfloat>
 #include <thrust/device_vector.h>
-
+#include <thrust/tabulate.h>
+#include <thrust/random.h>
+#include <thrust/transform.h>
+#include <thrust/transform_scan.h>
+#include <thrust/sort.h>
+#include <thrust/reduce.h>
+#include <thrust/binary_search.h>
+#include <thrust/iterator/constant_iterator.h>
+#include <iostream>
+#include <iomanip>
+#include <bitset>
+#include <algorithm>
 #include "swarmAgent.h"
 
 inline __device__ __host__
@@ -30,6 +43,8 @@ int child_tag_mask(int tag, int which_child, int level, int max_level)
   return tag | (which_child << shift);
 }
 
+
+
 // Markers
 enum { NODE = 1, LEAF = 2, EMPTY = 4 };
 
@@ -55,6 +70,8 @@ struct bbox
      ymin(p.position.y), ymax(p.position.y)
   {}
 };
+
+bbox compute_bounding_box(const thrust::device_vector<SwarmAgent> &points);
 
 struct classify_node
 {
@@ -98,7 +115,7 @@ struct merge_bboxes
 };
 
 __host__ __device__
-int point_to_tag(const SwarmAgent &p, bbox box, int max_level)
+inline int point_to_tag(const SwarmAgent &p, bbox box, int max_level)
 {
   int result = 0;
   
@@ -130,11 +147,6 @@ int point_to_tag(const SwarmAgent &p, bbox box, int max_level)
   result >>= 1;
 
   return result;
-}
-
-bbox compute_bounding_box(const thrust::device_vector<SwarmAgent> &points)
-{
-  return thrust::reduce(points.begin(), points.end(), bbox(), merge_bboxes());
 }
 
 // Classify a point with respect to the bounding box.
@@ -224,25 +236,24 @@ public:
 
 class QuadTree
 {
-	thrust::device_vector<SwarmAgent> agents;
-   thrust::device_vector<int> nodes;
-   thrust::device_vector<int2> leaves;
-   thrust::device_vector<int> tags;
-   thrust::device_vector<int> indices;
-   bbox bounds;
-   int maxLevel;
-   int threshold;
-
-public:
-	QuadTree(thrust::device_vector<SwarmAgent> &dSwarm,
-      int max_level, int thresh): agents(dSwarm)
-   {
-      maxLevel = max_level;
-      threshold = threshold;
-   }
-   void buildTree();
-	unsigned int getNodeCount();
-	SubSwarm getNodeSubSwarm(unsigned int node);
+   public:
+	   thrust::device_vector<SwarmAgent> &agents;
+      thrust::device_vector<int> nodes;
+      thrust::device_vector<int2> leaves;
+      thrust::device_vector<int> tags;
+      thrust::device_vector<int> indices;
+      bbox bounds;
+      int maxLevel;
+      int threshold;
+	   QuadTree(thrust::device_vector<SwarmAgent> &dSwarm,
+         int max_level, int thresh): agents(dSwarm)
+      {
+         maxLevel = max_level;
+         threshold = threshold;
+      }
+      void buildTree();
+	   unsigned int getNodeCount();
+	   SubSwarm getNodeSubSwarm(unsigned int node);
 };
 
 #endif

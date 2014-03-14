@@ -10,8 +10,11 @@ struct SwarmAgent {
 	uint8_t team;
 	bool alive;
 
-	SwarmAgent();
-	SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel);
+	__device__ __host__ SwarmAgent() : team(0), alive(false) {
+	   position.x = 0; position.y = 0;
+	   velocity.x = 0; velocity.y = 0;
+   }
+   SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel);
 
 
 	__device__ __host__ static int2 maxPosition()
@@ -49,5 +52,6 @@ return H_MAX_POSITION;
 		return sqrt(difx * difx + dify * dify);
 	}
 };
+
 
 #endif
