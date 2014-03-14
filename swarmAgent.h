@@ -14,7 +14,10 @@ struct SwarmAgent {
 	   position.x = 0; position.y = 0;
 	   velocity.x = 0; velocity.y = 0;
    }
-   SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel);
+   __device__ __host__ SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel) : team(team), alive(true) {
+	position.x = xPos; position.y = yPos;
+	velocity.x = xVel; velocity.y = yVel;
+}
 
 
 	__device__ __host__ static int2 maxPosition()
