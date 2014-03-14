@@ -63,7 +63,7 @@ const unsigned int window_height = 512;
 unsigned int numTeams = 2;
 unsigned int numAgentsPerTeam = 32;
 thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
-QuadTree quadTree = QuadTree(dSwarm, 10, 32);
+QuadTree quadTree = QuadTree(dSwarm, 3, 32);
 
 // vbo variables
 GLuint vbo;
