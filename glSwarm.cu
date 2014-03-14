@@ -63,7 +63,7 @@ const unsigned int window_height = 512;
 unsigned int numTeams = 2;
 unsigned int numAgentsPerTeam = 32;
 thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
-QuadTree quadTree = QuadTree(dSwarm, 3, 32);
+QuadTree quadTree = QuadTree(dSwarm, 32);
 
 // vbo variables
 GLuint vbo;
@@ -331,7 +331,7 @@ bool runTest(int argc, char **argv)
     glutMotionFunc(motion);
 
     // set up swarm
-    swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
+    swarmSetup(dSwarm, quadTree, numTeams, numAgentsPerTeam);
 
     // create VBO
     createVBO(&vbo, &cuda_vbo_resource);
@@ -504,7 +504,7 @@ void special(int key, int, int)
     {
         case GLUT_KEY_UP:
             numAgentsPerTeam *= 2;
-            swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
+            swarmSetup(dSwarm, quadTree, numTeams, numAgentsPerTeam);
             deleteVBO(&vbo, cuda_vbo_resource);
             createVBO(&vbo, &cuda_vbo_resource);
             break;
@@ -513,7 +513,7 @@ void special(int key, int, int)
             numAgentsPerTeam /= 2;
             if (numAgentsPerTeam  < 1)
                 numAgentsPerTeam = 1;
-            swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
+            swarmSetup(dSwarm, quadTree, numTeams, numAgentsPerTeam);
             deleteVBO(&vbo, cuda_vbo_resource);
             createVBO(&vbo, &cuda_vbo_resource);
             break;

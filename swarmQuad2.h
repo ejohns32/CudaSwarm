@@ -246,12 +246,9 @@ class QuadTree
       int maxLevel;
       int threshold;
 	   QuadTree(thrust::device_vector<SwarmAgent> &dSwarm,
-         int max_level, int thresh): agents(dSwarm)
-      {
-         maxLevel = max_level;
-         threshold = threshold;
-      }
+         int thresh): agents(dSwarm), maxLevel(1), threshold(threshold) {}
       void buildTree();
+      void setMaxLevel(int maxLevel) {this->maxLevel = maxLevel;}
 	   unsigned int getNodeCount();
 	   SubSwarm getNodeSubSwarm(unsigned int node);
 };

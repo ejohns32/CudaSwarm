@@ -48,9 +48,8 @@ void consoleLoop(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, 
 int main()
 {
 	thrust::device_vector<SwarmAgent> dSwarm = thrust::device_vector<SwarmAgent>();
-	swarmSetup(dSwarm, 2, 32);
-	QuadTree quadTree = QuadTree(dSwarm, 10, 32);
-   	quadTree.buildTree();
+	QuadTree quadTree = QuadTree(dSwarm, 32);
+	swarmSetup(dSwarm, quadTree, 2, 32);
 	consoleLoop(dSwarm, quadTree, 0.01f);
 
 	return 0;
