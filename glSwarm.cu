@@ -258,7 +258,7 @@ void computeFPS()
     }
 
     char fps[256];
-    sprintf(fps, "Cuda GL Interop (VBO): %3.1f fps (Max 100Hz)", avgFPS);
+    sprintf(fps, "Cuda Swarm: %d agents %3.1f fps (Max 100Hz)", numTeams * numAgentsPerTeam, avgFPS);
     glutSetWindowTitle(fps);
 }
 
@@ -515,7 +515,6 @@ void special(int key, int, int)
     {
         case GLUT_KEY_UP:
             numAgentsPerTeam *= 2;
-            std::cout << "numAgentsPerTeam: " << numAgentsPerTeam << std::endl;
             swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
             quadTree = QuadTree(dSwarm);
             deleteVBO(&vbo, cuda_vbo_resource);
@@ -524,7 +523,8 @@ void special(int key, int, int)
 
         case GLUT_KEY_DOWN:
             numAgentsPerTeam /= 2;
-            std::cout << "numAgentsPerTeam: " << numAgentsPerTeam << std::endl;
+            if (numAgentsPerTeam  < 1)
+                numAgentsPerTeam = 1;
             swarmSetup(dSwarm, numTeams, numAgentsPerTeam);
             quadTree = QuadTree(dSwarm);
             deleteVBO(&vbo, cuda_vbo_resource);
