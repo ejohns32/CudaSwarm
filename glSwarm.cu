@@ -456,8 +456,10 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
+    glPointSize(1.5f);
     glDrawArrays(GL_POINTS, 0, teamCutoff);
     glColor3f(0.0, 1.0, 0.0);
+    glPointSize(1.5f);
     glDrawArrays(GL_POINTS, teamCutoff, dSwarm.size() - teamCutoff);
     glDisableClientState(GL_VERTEX_ARRAY);
 

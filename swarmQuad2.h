@@ -249,6 +249,7 @@ class QuadTree
          int thresh): agents(dSwarm), maxLevel(1), threshold(threshold) {}
       void buildTree();
       void setMaxLevel(int maxLevel) {this->maxLevel = maxLevel;}
+      int getMaxLevel(){return maxLevel;}
 	   unsigned int getNodeCount();
 	   SubSwarm getNodeSubSwarm(unsigned int node);
 };

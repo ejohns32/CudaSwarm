@@ -219,14 +219,28 @@ struct is_dead
 
 void collectTheBodies(QuadTree &tree){
     tree.agents.erase(thrust::remove_if(tree.agents.begin(), tree.agents.end(), is_dead()), tree.agents.end());
+    while(tree.agents.size() / 32 < pow(4, tree.getMaxLevel() - 1)){
+       tree.setMaxLevel(tree.getMaxLevel() - 1);
+       std::cout << "Tree Levels: " << tree.getMaxLevel() << "\n";
+    }
 }
+
+struct otherTeam
+{
+   __host__ __device__
+      bool operator()(const SwarmAgent &agent)
+      {
+         return agent.team == 0;
+      }
+};
 
 unsigned int swarmStep(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, float timeStep)
 {
 	updateSwarm(quadTree, timeStep);
 	checkCollisions(quadTree);
-	//collectTheBodies(quadTree);
+	collectTheBodies(quadTree);
 	quadTree.buildTree();
 
-	return dSwarm.size() / 2;
+   return thrust::count_if(dSwarm.begin(), dSwarm.end(), otherTeam());
+
 }
