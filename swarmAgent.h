@@ -1,8 +1,8 @@
 #ifndef _SWARM_AGENT_H_
 #define _SWARM_AGENT_H_
 
-__constant__ int2 D_MAX_POSITION = {30, 30};
-const int2 H_MAX_POSITION = {30, 30};
+__constant__ static  int2 D_MAX_POSITION = {100, 100};
+static int2 H_MAX_POSITION = {100, 100};
 
 struct SwarmAgent {
 	float2 position;
@@ -15,21 +15,30 @@ struct SwarmAgent {
 	   velocity.x = 0; velocity.y = 0;
    }
    __device__ __host__ SwarmAgent(uint8_t team, float xPos, float yPos, float xVel, float yVel) : team(team), alive(true) {
-	position.x = xPos; position.y = yPos;
-	velocity.x = xVel; velocity.y = yVel;
-}
+		position.x = xPos; position.y = yPos;
+		velocity.x = xVel; velocity.y = yVel;
+	}
 
+
+	static void setMaxPosition(int max)
+	{
+		cudaMemcpyToSymbol(&D_MAX_POSITION.x, &max, sizeof(int));
+		cudaMemcpyToSymbol(&D_MAX_POSITION.y, &max, sizeof(int));
+		H_MAX_POSITION.x = max;
+		H_MAX_POSITION.y = max;
+	}
 
 	__device__ __host__ static int2 maxPosition()
 	{
 #ifdef __CUDA_ARCH__
-return D_MAX_POSITION;
+		return D_MAX_POSITION;
 #else
-return H_MAX_POSITION;
+		return H_MAX_POSITION;
 #endif
 	}
 	
-	__host__ __device__ void update(const float timeStep) {		position.x += velocity.x * timeStep;
+	__host__ __device__ void update(const float timeStep) {
+		position.x += velocity.x * timeStep;
 		position.y += velocity.y * timeStep;
 
 		if (position.x >= maxPosition().x) {
@@ -55,6 +64,5 @@ return H_MAX_POSITION;
 		return sqrt(difx * difx + dify * dify);
 	}
 };
-
 
 #endif

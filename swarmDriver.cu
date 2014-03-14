@@ -35,6 +35,9 @@ struct SpawnTeam {
 
 void swarmSetup(thrust::device_vector<SwarmAgent> &dSwarm, QuadTree &quadTree, unsigned int numTeams, unsigned int numAgentsPerTeam)
 {
+	int maxPosition = sqrt(numTeams * numAgentsPerTeam);
+	SwarmAgent::setMaxPosition(maxPosition);
+
 	dSwarm.resize(numTeams * numAgentsPerTeam);
 
 	thrust::tabulate(dSwarm.begin(), dSwarm.end(), SpawnTeam(numTeams, numAgentsPerTeam));
